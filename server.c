@@ -22,21 +22,27 @@ int choose_word(int size){
     return rand() % size + 1;
 }
 
-char* reveal_word(char lettre [], char mot [], char devine []){
+char* reveal_word(char lettre [], char mot [], char devine [],int nb_life){
     char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
+//////////////gérer répétitions ? 
+
     if (strstr(alphabet, lettre) != NULL){ // vérifie que la letttre fait partie de l'alphabet 
+        
         for (int i = 0; i < strlen(mot); i++){
             if (mot[i] == lettre[0]){
                 devine[i] = lettre[0];
             }
         }
+        if(strstr(mot, lettre) == NULL) {
+            printf("La lettre %s ne fait pas partie du mot mystère !", lettre);
+            nb_life--;
+            afficher_pendu(nb_life);
+        }
     } else {
         printf("Vous devez rentrer un caractère valide");
-        return NULL;
     }
     return devine;
 }
-
 
 int main() {
     int server_fd, new_socket;
@@ -110,7 +116,7 @@ int main() {
 }
 
 int pendu(int new_socket) {
-    int nb_life = 11;
+    int nb_life = 6;
     printf("\n-------- début du pendu --------\n\n");
     char *liste_de_mots [NUM_WORDS] = {
         "chien", "chat", "voiture", "maison", "ordinateur", 
@@ -172,16 +178,14 @@ int pendu(int new_socket) {
             remove_newline(lettre);
     
             printf("Lettre reçu : %s\n\n", lettre);
-            reveal_word(lettre, mot, devine);
+            reveal_word(lettre, mot, devine, nb_life); //on change devine si nécessaire 
 
-            // Comparaison correcte du message
+            //renvoie de devine au client pour ensuite recommencer. 
     
             memset(lettre, 0, BUFFER_SIZE);  // Réinitialisation du buffer
         }
     
     }
-
-
 
     free(devine);
     return 0;

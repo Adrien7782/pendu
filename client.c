@@ -11,6 +11,34 @@ void remove_newline(char *str) {
     str[strcspn(str, "\n")] = 0;  // Supprime le '\n' à la fin de la chaîne
 }
 
+void afficher_pendu(int vies) {
+    switch (vies) {
+        case 6:
+            printf("6 vies restantes\n\n\n\n\n\n=========\n"); 
+            break;
+        case 5:
+            printf("5 vies restantes\n\n    |\n    |\n    |\n    |\n=========\n"); 
+            break;
+        case 4:
+            printf("4 vies restantes\n    +---+\n    |   |\n        |\n        |\n        |\n=========\n"); 
+            break;
+        case 3:
+            printf("3 vies restantes\n    +---+\n    |   |\n    O   |\n        |\n        |\n=========\n"); 
+            break;
+        case 2:
+            printf("2 vies restantes\n    +---+\n    |   |\n    O   |\n    |   |\n        |\n=========\n"); 
+            break;
+        case 1:
+            printf("1 vie restante\n    +---+\n    |   |\n    O   |\n   /|\\  |\n        |\n=========\n"); 
+            break;
+        case 0:
+            printf("0 vies restantes - PERDU !\n    +---+\n    |   |\n    O   |\n   /|\\  |\n   / \\  |\n=========\n Vous avez perdu !\n"); 
+            break;
+        default:
+            printf("Erreur: nombre de vies invalide !\n");
+    }
+}
+
 int main() {
     int sock;
     struct sockaddr_in server_address;
