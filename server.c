@@ -133,8 +133,8 @@ int main() {
 
 int pendu(int new_socket) {
     printf("\n-------- début du pendu --------\n\n");
-    char *liste_de_mots [NUM_WORDS] = {
-        "chien", "chat", "voiture", "maison", "ordinateur", 
+    char *liste_de_mots[NUM_WORDS] = {
+        "chien", "chat", "voiture", "maison", "ordinateur",
         "bureau", "ecole", "livre", "montagne", "mer", 
         "pomme", "banane", "avion", "arbre", "fleur", 
         "table", "chaise", "fenetre", "porte", "rue", 
@@ -146,9 +146,8 @@ int pendu(int new_socket) {
         "chemin", "route", "monts", "plage", "jardin"
     };
 
-    int index = choose_word(NUM_WORDS);
+    int index = choose_word(NUM_WORDS);  // Choisir un mot aléatoire
     char *mot = liste_de_mots[index];
-
     size_t longueur = strlen(mot);
     char *devine = malloc(longueur + 1);
 
@@ -160,7 +159,6 @@ int pendu(int new_socket) {
     for (int i = 0; i < longueur; i++) {
         devine[i] = '_';
     }
-
     devine[longueur] = '\0';
 
     printf("Mot : %s\n", mot);
@@ -173,62 +171,39 @@ int pendu(int new_socket) {
         return 1;
     }
 
-    printf("Mot caché envoyé au client : %s\n", devine);
-
-//fin de l'initialisation du Pendu
-
-//début de la séquence de tours entre le server et le client
-
+    // Début de la boucle de jeu
     int mot_trouve = 0;
     char lettre[LETTRE_SIZE] = {0};
 
-    while(nb_life > 0 && mot_trouve == 0){ //tant que le mot n'a pas été trouvé ou que le nombre de vie n'est pas épuisé alors on continue 
-        //gérer l'abandon et les cas de victoire / défaite
-
-        if (strcmp(devine, mot) == 0){ // si le mot est strictement égal à devine alors le mot a été trouvé et le joueur gagne
-            mot_trouve = 1;
-            break;
-        }
-
+    while (nb_life > 0 && !mot_trouve) {  // Tant qu'il y a des vies et que le mot n'est pas trouvé
         ssize_t bytes_received;
-        while ((bytes_received = read(new_socket, lettre, LETTRE_SIZE - 1)) > 0) {
-            lettre[bytes_received] = '\0';  // Ajoute un caractère de fin de chaîne
-       
-            // Supprimer le '\n' du buffer si nécessaire
-            remove_newline(lettre);
+        bytes_received = read(new_socket, lettre, LETTRE_SIZE - 1);
+        if (bytes_received > 0) {
+            lettre[bytes_received] = '\0';
+            remove_newline(lettre);  // Supprimer '\n'
 
-            printf("Lettre reçu : %s\n\n", lettre);
-            reveal_word(lettre, mot, devine);
-            printf("Mot mystère : %s\nNombre de vies restantes : %d \n", devine, nb_life);
-            if (mot_trouve == 1){
-                send(new_socket, "gagne", 6, 0);
-                close(new_socket);
-                return 0;
-            }else if (nb_life <= 0){
-                send(new_socket, "perdu", 6, 0);
-                close(new_socket);
-                return 0;
-            }else{
-                send(new_socket, concatene(nb_life, devine), strlen(devine) + 1, 0);
-            }     
-            if (strcmp(devine, mot) == 0){ // si le mot est strictement égal à devine alors le mot a été trouvé et le joueur gagne
+            // Révéler la lettre et vérifier
+            devine = reveal_word(lettre, mot, devine);
+
+            // Vérifier si le mot a été trouvé
+            if (strcmp(devine, mot) == 0) {
                 mot_trouve = 1;
+                send(new_socket, "gagne", 6, 0);  // Envoyer "gagne" au client
+                
                 break;
             }
 
-            memset(lettre, 0, LETTRE_SIZE);  // Réinitialisation du buffer
+            // Vérifier si l'utilisateur a perdu
+            if (nb_life <= 0) {
+                send(new_socket, "perdu", 6, 0);  // Envoyer "perdu" au client
+                break;
+            }
 
+            // Envoyer la mise à jour du mot caché et les vies restantes
+            send(new_socket, concatene(nb_life, devine), strlen(devine) + 1, 0);
+            printf("Mot mystère : %s\nNombre de vies restantes : %d\n", devine, nb_life);
         }
     }
-
-    if(nb_life <= 0){
-        printf("\nLe client a perdu\n");
-        //envoie du message au client avec un zero devant 
-    } else if (mot_trouve == 1) {
-        printf("Le client a gagné !\n");
-        //envoie du message de victoire
-    }
-    
     free(devine);
     return 0;
 }

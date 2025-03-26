@@ -135,21 +135,17 @@ int main() {
         bytes_received = read(sock, buffer, BUFFER_SIZE - 1);
     
         if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';  // Assurez-vous que le buffer est bien terminé
-            remove_newline(buffer);  // Supprime les éventuels '\n' qui empêchent la comparaison
+            buffer[bytes_received] = '\0';
+            remove_newline(buffer);
             
-            // Vérification si le joueur a gagné ou perdu
             if (strcmp(buffer, "gagne") == 0) {
                 printf("Vous avez gagné ! Félicitations !\n");
-                gagne = 1;
                 break;
-            }
-
-            if (strcmp(buffer, "perdu") == 0) {
+            } else if (strcmp(buffer, "perdu") == 0) {
                 printf("Vous avez perdu ! Dommage...\n");
-                perdu = 1;
                 break;
             }
+        
             traitement_message(buffer);
         }
     }   
