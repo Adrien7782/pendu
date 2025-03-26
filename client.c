@@ -4,9 +4,11 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define PORT 9090
+#define PORT 9093
 #define BUFFER_SIZE 1024
 #define LETTRE_SIZE 1024
+
+int sock;
 
 void remove_newline(char *str) {
     str[strcspn(str, "\n")] = 0;  // Supprime le '\n' à la fin de la chaîne
@@ -20,17 +22,11 @@ void slice(const char *source, char *dest, int start, int end) {
     dest[j] = '\0'; // Null-terminate the string
 }
 
-void traitement_message(char *str) {
-
-    char message[strlen(str)];  
-    slice(str, message, 1, strlen(str));  
-
-    printf("Mot mystère : %s\n", message);
-    printf("Nombre de vies : %d\n\n", str[0] - '0'); 
-}
-
 void afficher_pendu(int vies) {
     switch (vies) {
+        case 7:
+            printf("\n\n\n\n\n\n\n");
+            break;
         case 6:
             printf("6 vies restantes\n\n\n\n\n\n=========\n"); 
             break;
@@ -57,8 +53,18 @@ void afficher_pendu(int vies) {
     }
 }
 
+void traitement_message(char *str) {
+    char message[strlen(str)];  
+
+    slice(str, message, 1, strlen(str));  
+
+    printf("\nMot mystère : %s\n", message);
+    printf("Nombre de vies : %d\n\n", str[0] - '0');
+    afficher_pendu(str[0] - '0');
+}
+
+
 int main() {
-    int sock;
     struct sockaddr_in server_address;
     char buffer[BUFFER_SIZE] = {0};
     char message[BUFFER_SIZE];
@@ -111,31 +117,44 @@ int main() {
     char lettre[LETTRE_SIZE] = {0};
 
     printf("Vous devez trouver le mot mystère !\n\n");
-    printf("Entrez une lettre : ");
-    if (fgets(lettre, LETTRE_SIZE, stdin) == NULL || strlen(lettre) <= 1) {
-        printf("Vous devez rentrer une lettre !!! \n");
-        close(sock);
-        return 0;
-    }
-    remove_newline(lettre);
+
+    int perdu = 0;
+    int gagne = 0;
+    while(perdu == 0 && gagne == 0) {
+        printf("Entrez une lettre : ");
+        if ((perdu == 0 && gagne == 0 && fgets(lettre, LETTRE_SIZE, stdin) == NULL ) || (perdu == 0 && gagne == 0 && strlen(lettre) <= 1)) {
+            printf("Vous devez rentrer une lettre !!! \n");
+            close(sock);
+            return 0;
+        }
+        
+        remove_newline(lettre);
+        
+        send(sock, lettre, strlen(lettre), 0);
+        
+        bytes_received = read(sock, buffer, BUFFER_SIZE - 1);
     
-    send(sock, lettre, strlen(lettre), 0);
+        if (bytes_received > 0) {
+            buffer[bytes_received] = '\0';  // Assurez-vous que le buffer est bien terminé
+            remove_newline(buffer);  // Supprime les éventuels '\n' qui empêchent la comparaison
+            
+            // Vérification si le joueur a gagné ou perdu
+            if (strcmp(buffer, "123") == 0) {
+                printf("Vous avez gagné ! Félicitations !\n");
+                gagne = 1;
+                break;
+            }
 
-    bytes_received = read(sock, buffer, BUFFER_SIZE - 1);
-    if (bytes_received > 0){
-        traitement_message(buffer);
-    }
-    // SERVER ENVOIE UNE CHAINE DE CARACTERE AVEC EN INDEX 0 LE NB DE VIE
-    //(pour afficher la vie) ET ENSUITE LE MOT DEVINE
-
-    //mettre la fonction afficher vie dans le client  
-    //qui prend en paramètre int 
-
-    //sur client je dois faire du traitement de donnée 
-    //récupérer le caractere d'indice 1
-    //fonction afficher vies
-    //récupérer et afficher le reste
-
+            if (strcmp(buffer, "perdu") == 0) {
+                printf("Vous avez perdu ! Dommage...\n");
+                perdu = 1;
+                break;
+            }
+            traitement_message(buffer);
+        }
+    }   
+    
+    // Fermeture du socket avant de quitter
     close(sock);
     return 0;
 }

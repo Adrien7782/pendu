@@ -5,11 +5,11 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#define PORT 9090
+#define PORT 9093
 #define BUFFER_SIZE 1024
 #define NUM_WORDS 50
 #define LETTRE_SIZE 1024
-int static nb_life = 6;
+int static nb_life = 7;
 
 
 int pendu(int new_socket);
@@ -23,14 +23,14 @@ char* concatene(int vies, char* mot) {
     int len = strlen(mot);
     char* res = malloc(len + 2); // +1 pour 'vies' et +1 pour '\0'
 
-    res[0] = vies + '0'; // Ajoute le caractère 'vies' en début de chaîne
+    res[0] = vies + '0'; // transforme vies en caractere puis le concatene en premiere place de la chaine 
 
     for (int i = 0; i < len; i++) {
         res[i + 1] = mot[i]; // Copie chaque caractère du mot
     }
 
     res[len + 1] = '\0'; // Ajoute le caractère de fin de chaîne
-    printf("%s\n", res);
+    //printf("%s\n", res);
     return res; // Retourne la nouvelle chaîne
 }
 
@@ -119,7 +119,7 @@ int main() {
 
     // Gestion de la fin de connexion
     if (bytes_received == 0) {
-        printf("🔴 Client déconnecté.\n");
+        printf("Client déconnecté.\n");
     } else {
         perror("❌ Erreur de lecture");
     }
@@ -168,7 +168,7 @@ int pendu(int new_socket) {
     // Envoi du mot caché au client
     ssize_t bytes_sent = send(new_socket, devine, strlen(devine), 0);
     if (bytes_sent < 0) {
-        perror("❌ Erreur lors de l'envoi du mot caché");
+        perror("Erreur lors de l'envoi du mot caché");
         free(devine);
         return 1;
     }
@@ -182,38 +182,53 @@ int pendu(int new_socket) {
     int mot_trouve = 0;
     char lettre[LETTRE_SIZE] = {0};
 
-    while(nb_life <= 0 || mot_trouve == 0){ //tant que le mot n'a pas été trouvé ou que le nombre de vie n'est pas épuisé alors on continue 
+    while(nb_life > 0 && mot_trouve == 0){ //tant que le mot n'a pas été trouvé ou que le nombre de vie n'est pas épuisé alors on continue 
         //gérer l'abandon et les cas de victoire / défaite
+
+        if (strcmp(devine, mot) == 0){ // si le mot est strictement égal à devine alors le mot a été trouvé et le joueur gagne
+            mot_trouve = 1;
+            break;
+        }
 
         ssize_t bytes_received;
         while ((bytes_received = read(new_socket, lettre, LETTRE_SIZE - 1)) > 0) {
             lettre[bytes_received] = '\0';  // Ajoute un caractère de fin de chaîne
-
+       
             // Supprimer le '\n' du buffer si nécessaire
             remove_newline(lettre);
 
             printf("Lettre reçu : %s\n\n", lettre);
             reveal_word(lettre, mot, devine);
             printf("Mot mystère : %s\nNombre de vies restantes : %d \n", devine, nb_life);
-            
-            send(new_socket, concatene(nb_life, devine), strlen(devine) + 1, 0);
+            if (mot_trouve == 1){
+                send(new_socket, "123", 6, 0);
+                close(new_socket);
+                return 0;
+            }else if (nb_life <= 0){
+                send(new_socket, "perdu", 6, 0);
+                close(new_socket);
+                return 0;
+            }else{
+                send(new_socket, concatene(nb_life, devine), strlen(devine) + 1, 0);
+            }     
+            if (strcmp(devine, mot) == 0){ // si le mot est strictement égal à devine alors le mot a été trouvé et le joueur gagne
+                mot_trouve = 1;
+                break;
+            }
 
             memset(lettre, 0, LETTRE_SIZE);  // Réinitialisation du buffer
 
         }
     }
 
-
-
     if(nb_life <= 0){
-        printf("le client a perdu\n");
+        printf("\nLe client a perdu\n");
         //envoie du message au client avec un zero devant 
     } else if (mot_trouve == 1) {
         printf("Le client a gagné !\n");
         //envoie du message de victoire
     }
-        
-
+    
     free(devine);
     return 0;
 }
