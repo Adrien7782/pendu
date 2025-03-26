@@ -5,12 +5,15 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-#define PORT 9093
+#define PORT 9096
 #define BUFFER_SIZE 1024
 #define NUM_WORDS 50
 #define LETTRE_SIZE 1024
+#define DECISION_SIZE 1024
+
 int static nb_life = 7;
 
+int rejouer(int new_socket);
 
 int pendu(int new_socket);
 
@@ -68,7 +71,7 @@ int main() {
 
     // Création du socket serveur
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("❌ Erreur lors de la création du socket");
+        perror("Erreur lors de la création du socket");
         exit(EXIT_FAILURE);
     }
 
@@ -79,13 +82,13 @@ int main() {
 
     // Associer le socket à l'adresse (bind)
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("❌ Erreur lors du bind");
+        perror("Erreur lors du bind");
         exit(EXIT_FAILURE);
     }
 
     // Mettre le socket en mode écoute
     if (listen(server_fd, 3) < 0) {
-        perror("❌ Erreur lors de l'écoute");
+        perror("Erreur lors de l'écoute");
         exit(EXIT_FAILURE);
     }
 
@@ -93,7 +96,7 @@ int main() {
 
     // Attente d'une connexion client
     if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addr_len)) < 0) {
-        perror("❌ Erreur lors de l'acceptation de la connexion");
+        perror("Erreur lors de l'acceptation de la connexion");
         exit(EXIT_FAILURE);
     }
 
@@ -189,13 +192,16 @@ int pendu(int new_socket) {
             if (strcmp(devine, mot) == 0) {
                 mot_trouve = 1;
                 send(new_socket, "gagne", 6, 0);  // Envoyer "gagne" au client
-                
+                printf("La partie est terminé, le client a gagné !\n");
+                rejouer(new_socket);
                 break;
             }
 
             // Vérifier si l'utilisateur a perdu
             if (nb_life <= 0) {
                 send(new_socket, "perdu", 6, 0);  // Envoyer "perdu" au client
+                printf("La partie est terminé, le client a perdu... \n");
+                rejouer(new_socket);
                 break;
             }
 
@@ -205,5 +211,26 @@ int pendu(int new_socket) {
         }
     }
     free(devine);
+    return 0;
+}
+
+
+int rejouer(int new_socket){
+    char decision[DECISION_SIZE] = {0};
+    ssize_t bytes_received;
+
+    bytes_received = read(new_socket, decision, DECISION_SIZE - 1);
+    if (bytes_received > 0) {
+        decision[bytes_received] = '\0';
+        remove_newline(decision);
+        if (strcmp(decision, "O") == 0 ) {
+            printf("Une nouvelle partie va commencer ! \n");
+            pendu(new_socket);
+        }
+        if (strcmp(decision, "n") == 0) {
+            printf("Aucune partie ne va recommencer !\n");
+            close(new_socket);
+        }
+    }
     return 0;
 }

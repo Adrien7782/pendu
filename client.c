@@ -4,11 +4,14 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define PORT 9093
+#define PORT 9096
 #define BUFFER_SIZE 1024
 #define LETTRE_SIZE 1024
+#define DECISION_SIZE 1024
 
 int sock;
+
+int pendu(int sock);
 
 void remove_newline(char *str) {
     str[strcspn(str, "\n")] = 0;  // Supprime le '\n' à la fin de la chaîne
@@ -25,7 +28,7 @@ void slice(const char *source, char *dest, int start, int end) {
 void afficher_pendu(int vies) {
     switch (vies) {
         case 7:
-            printf("\n\n\n\n\n\n\n");
+            printf("\n\n");
             break;
         case 6:
             printf("6 vies restantes\n\n\n\n\n\n=========\n"); 
@@ -63,7 +66,6 @@ void traitement_message(char *str) {
     afficher_pendu(str[0] - '0');
 }
 
-
 int main() {
     struct sockaddr_in server_address;
     char buffer[BUFFER_SIZE] = {0};
@@ -71,7 +73,7 @@ int main() {
 
     // Création du socket client
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("❌ Erreur lors de la création du socket");
+        perror("Erreur création du socket");
         exit(EXIT_FAILURE);
     }
 
@@ -80,20 +82,20 @@ int main() {
     server_address.sin_port = htons(PORT);
 
     if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
-        perror("❌ Adresse invalide");
+        perror("Adresse invalide");
         exit(EXIT_FAILURE);
     }
 
     // Connexion au serveur
     if (connect(sock, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
-        perror("❌ Échec de la connexion au serveur");
+        perror("Échec de la connexion au serveur");
         exit(EXIT_FAILURE);
     }
 
     // Lire un message à envoyer
-    printf("💬 Entrez un message : ");
+    printf("Entrez un message : ");
     if (fgets(message, BUFFER_SIZE, stdin) == NULL || strlen(message) <= 1) {
-        printf("🔴 Message vide, arrêt du client.\n");
+        printf("Message vide, arrêt du client.\n");
         close(sock);
         return 0;
     }
@@ -104,30 +106,61 @@ int main() {
     // Envoi du message au serveur
     send(sock, message, strlen(message), 0);
 
+    if (strcmp(message, "pendu") == 0){
+        pendu(sock);
+    }
+    return 0;
+}
+
+int rejouer(int sock){
+    char decision[LETTRE_SIZE] = {0};
+    printf("\nVoulez-vous rejouer (O/n) ?\n");
+    fgets(decision, DECISION_SIZE, stdin);
+    remove_newline(decision);
+    
+        if (strcmp(decision, "O") == 0) {
+            printf("Très bien la partie va commencer !\n");
+            send(sock, decision, strlen(decision), 0);
+            pendu(sock);
+        } else {
+            printf("OK à bientôt !\n");
+            close(sock);
+        }
+    return 0;
+}
+
+int pendu(int sock){
+    char buffer[BUFFER_SIZE] = {0};
+
     printf("\n\n----- Début du pendu ----- \n\n");
 
     // Attente de la réponse du serveur (affichage du mot caché par exemple)
     ssize_t bytes_received = read(sock, buffer, BUFFER_SIZE - 1);
     if (bytes_received > 0) {
         buffer[bytes_received] = '\0';
-        printf("📩 Réponse du serveur : %s\n", buffer);
+        printf("Mot mystère : %s\n", buffer);
     } else {
-        printf("🔴 Aucune réponse reçue du serveur.\n");
+        printf("Aucune réponse reçue du serveur.\n");
     }
     char lettre[LETTRE_SIZE] = {0};
 
     printf("Vous devez trouver le mot mystère !\n\n");
 
-    int perdu = 0;
-    int gagne = 0;
+    int perdu;
+    int gagne;
+
+    perdu = 0;
+    gagne = 0;
+
     while(perdu == 0 && gagne == 0) {
-        printf("Entrez une lettre : ");
-        if ((perdu == 0 && gagne == 0 && fgets(lettre, LETTRE_SIZE, stdin) == NULL ) || (perdu == 0 && gagne == 0 && strlen(lettre) <= 1)) {
-            printf("Vous devez rentrer une lettre !!! \n");
-            close(sock);
-            return 0;
+        printf("\nEntrez une lettre : ");
+        fgets(lettre, LETTRE_SIZE, stdin);
+        if (lettre == NULL ||  strlen(lettre) <= 1) {
+            printf("Vous devez rentrer un caractère ! ");
         }
-        
+
+        //fgets(lettre, LETTRE_SIZE, stdin);
+
         remove_newline(lettre);
         
         send(sock, lettre, strlen(lettre), 0);
@@ -139,10 +172,13 @@ int main() {
             remove_newline(buffer);
             
             if (strcmp(buffer, "gagne") == 0) {
-                printf("Vous avez gagné ! Félicitations !\n");
+                printf("\nVous avez gagné ! Félicitations !\n");
+                rejouer(sock);
                 break;
             } else if (strcmp(buffer, "perdu") == 0) {
-                printf("Vous avez perdu ! Dommage...\n");
+                afficher_pendu(0);
+                printf("\nVous avez perdu ! Dommage...\n");
+                rejouer(sock);
                 break;
             }
         
@@ -150,7 +186,5 @@ int main() {
         }
     }   
     
-    // Fermeture du socket avant de quitter
-    close(sock);
     return 0;
 }
