@@ -6,9 +6,27 @@
 
 #define PORT 9090
 #define BUFFER_SIZE 1024
+#define LETTRE_SIZE 1024
 
 void remove_newline(char *str) {
     str[strcspn(str, "\n")] = 0;  // Supprime le '\n' à la fin de la chaîne
+}
+
+void slice(const char *source, char *dest, int start, int end) {
+    int j = 0;
+    for (int i = start; i < end && source[i] != '\0'; i++) {
+        dest[j++] = source[i];
+    }
+    dest[j] = '\0'; // Null-terminate the string
+}
+
+void traitement_message(char *str) {
+
+    char message[strlen(str)];  
+    slice(str, message, 1, strlen(str));  
+
+    printf("Mot mystère : %s\n", message);
+    printf("Nombre de vies : %d\n\n", str[0] - '0'); 
 }
 
 void afficher_pendu(int vies) {
@@ -80,6 +98,8 @@ int main() {
     // Envoi du message au serveur
     send(sock, message, strlen(message), 0);
 
+    printf("\n\n----- Début du pendu ----- \n\n");
+
     // Attente de la réponse du serveur (affichage du mot caché par exemple)
     ssize_t bytes_received = read(sock, buffer, BUFFER_SIZE - 1);
     if (bytes_received > 0) {
@@ -88,6 +108,33 @@ int main() {
     } else {
         printf("🔴 Aucune réponse reçue du serveur.\n");
     }
+    char lettre[LETTRE_SIZE] = {0};
+
+    printf("Vous devez trouver le mot mystère !\n\n");
+    printf("Entrez une lettre : ");
+    if (fgets(lettre, LETTRE_SIZE, stdin) == NULL || strlen(lettre) <= 1) {
+        printf("Vous devez rentrer une lettre !!! \n");
+        close(sock);
+        return 0;
+    }
+    remove_newline(lettre);
+    
+    send(sock, lettre, strlen(lettre), 0);
+
+    bytes_received = read(sock, buffer, BUFFER_SIZE - 1);
+    if (bytes_received > 0){
+        traitement_message(buffer);
+    }
+    // SERVER ENVOIE UNE CHAINE DE CARACTERE AVEC EN INDEX 0 LE NB DE VIE
+    //(pour afficher la vie) ET ENSUITE LE MOT DEVINE
+
+    //mettre la fonction afficher vie dans le client  
+    //qui prend en paramètre int 
+
+    //sur client je dois faire du traitement de donnée 
+    //récupérer le caractere d'indice 1
+    //fonction afficher vies
+    //récupérer et afficher le reste
 
     close(sock);
     return 0;

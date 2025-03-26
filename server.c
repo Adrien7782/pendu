@@ -9,6 +9,8 @@
 #define BUFFER_SIZE 1024
 #define NUM_WORDS 50
 #define LETTRE_SIZE 1024
+int static nb_life = 6;
+
 
 int pendu(int new_socket);
 
@@ -17,12 +19,27 @@ void remove_newline(char *str) {
     str[strcspn(str, "\n")] = 0;  // Suppprime le '\n' à la fin de la chaîne
 }
 
+char* concatene(int vies, char* mot) {
+    int len = strlen(mot);
+    char* res = malloc(len + 2); // +1 pour 'vies' et +1 pour '\0'
+
+    res[0] = vies + '0'; // Ajoute le caractère 'vies' en début de chaîne
+
+    for (int i = 0; i < len; i++) {
+        res[i + 1] = mot[i]; // Copie chaque caractère du mot
+    }
+
+    res[len + 1] = '\0'; // Ajoute le caractère de fin de chaîne
+    printf("%s\n", res);
+    return res; // Retourne la nouvelle chaîne
+}
+
 int choose_word(int size){
     srand (time(NULL));
     return rand() % size + 1;
 }
 
-char* reveal_word(char lettre [], char mot [], char devine [],int nb_life){
+char* reveal_word(char lettre [], char mot [], char devine []){
     char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
 //////////////gérer répétitions ? 
 
@@ -34,9 +51,8 @@ char* reveal_word(char lettre [], char mot [], char devine [],int nb_life){
             }
         }
         if(strstr(mot, lettre) == NULL) {
-            printf("La lettre %s ne fait pas partie du mot mystère !", lettre);
+            printf("La lettre %s ne fait pas partie du mot mystère !\n\n", lettre);
             nb_life--;
-            afficher_pendu(nb_life);
         }
     } else {
         printf("Vous devez rentrer un caractère valide");
@@ -116,7 +132,6 @@ int main() {
 }
 
 int pendu(int new_socket) {
-    int nb_life = 6;
     printf("\n-------- début du pendu --------\n\n");
     char *liste_de_mots [NUM_WORDS] = {
         "chien", "chat", "voiture", "maison", "ordinateur", 
@@ -165,27 +180,39 @@ int pendu(int new_socket) {
 //début de la séquence de tours entre le server et le client
 
     int mot_trouve = 0;
+    char lettre[LETTRE_SIZE] = {0};
 
-    while(nb_life != 0 || mot_trouve == 0){ //tant que le mot n'a pas été trouvé ou que le nombre de vie n'est pas épuisé alors on continue 
+    while(nb_life <= 0 || mot_trouve == 0){ //tant que le mot n'a pas été trouvé ou que le nombre de vie n'est pas épuisé alors on continue 
         //gérer l'abandon et les cas de victoire / défaite
-        char lettre[LETTRE_SIZE] = {0};
 
         ssize_t bytes_received;
         while ((bytes_received = read(new_socket, lettre, LETTRE_SIZE - 1)) > 0) {
             lettre[bytes_received] = '\0';  // Ajoute un caractère de fin de chaîne
-    
+
             // Supprimer le '\n' du buffer si nécessaire
             remove_newline(lettre);
-    
-            printf("Lettre reçu : %s\n\n", lettre);
-            reveal_word(lettre, mot, devine, nb_life); //on change devine si nécessaire 
 
-            //renvoie de devine au client pour ensuite recommencer. 
-    
-            memset(lettre, 0, BUFFER_SIZE);  // Réinitialisation du buffer
+            printf("Lettre reçu : %s\n\n", lettre);
+            reveal_word(lettre, mot, devine);
+            printf("Mot mystère : %s\nNombre de vies restantes : %d \n", devine, nb_life);
+            
+            send(new_socket, concatene(nb_life, devine), strlen(devine) + 1, 0);
+
+            memset(lettre, 0, LETTRE_SIZE);  // Réinitialisation du buffer
+
         }
-    
     }
+
+
+
+    if(nb_life <= 0){
+        printf("le client a perdu\n");
+        //envoie du message au client avec un zero devant 
+    } else if (mot_trouve == 1) {
+        printf("Le client a gagné !\n");
+        //envoie du message de victoire
+    }
+        
 
     free(devine);
     return 0;
