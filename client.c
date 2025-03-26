@@ -93,7 +93,8 @@ int main() {
     }
 
     // Lire un message à envoyer
-    printf("Entrez un message : ");
+    printf("A quel jeu voulez-vous jouer ? ");
+    printf("\n\t-pendu\n\t-à venir...\n\nVotre choix : ");
     if (fgets(message, BUFFER_SIZE, stdin) == NULL || strlen(message) <= 1) {
         printf("Message vide, arrêt du client.\n");
         close(sock);
@@ -117,7 +118,7 @@ int rejouer(int sock){
     printf("\nVoulez-vous rejouer (O/n) ?\n");
     fgets(decision, DECISION_SIZE, stdin);
     remove_newline(decision);
-    
+
         if (strcmp(decision, "O") == 0) {
             printf("Très bien la partie va commencer !\n");
             send(sock, decision, strlen(decision), 0);
