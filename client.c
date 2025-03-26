@@ -139,7 +139,7 @@ int main() {
             remove_newline(buffer);  // Supprime les éventuels '\n' qui empêchent la comparaison
             
             // Vérification si le joueur a gagné ou perdu
-            if (strcmp(buffer, "123") == 0) {
+            if (strcmp(buffer, "gagne") == 0) {
                 printf("Vous avez gagné ! Félicitations !\n");
                 gagne = 1;
                 break;

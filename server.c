@@ -201,7 +201,7 @@ int pendu(int new_socket) {
             reveal_word(lettre, mot, devine);
             printf("Mot mystère : %s\nNombre de vies restantes : %d \n", devine, nb_life);
             if (mot_trouve == 1){
-                send(new_socket, "123", 6, 0);
+                send(new_socket, "gagne", 6, 0);
                 close(new_socket);
                 return 0;
             }else if (nb_life <= 0){
